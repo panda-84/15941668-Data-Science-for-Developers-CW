@@ -1,78 +1,59 @@
+#==========================================
+# Broadband Data Cleaning
+#==========================================
+
+# Load required libraries
 library(readr)
 library(dplyr)
 library(tidyr)
-# Read the dataset
-broadband <- read_csv(
-  "C:/Users/Bibek/OneDrive/Documents/Raw_data/internet/201805_fixed_pc_performance_r03.csv"
-)
-
-# Inspect
-glimpse(broadband)
-summary(broadband)
-
-# Remove duplicate rows
-broadband <- broadband %>%
-  distinct()
-
-# Check missing values
-colSums(is.na(broadband))
-
-broadband <- broadband %>%
-  select(
-    postcode,
-    postcode_area,
-    average_download,
-    maximum_download,
-    average_upload,
-    maximum_upload
-  )
-install.packages("janitor")   # Only if you don't have it
 library(janitor)
 
-broadband <- broadband %>%
-  clean_names()
-names(broadband)
+# Read the broadband dataset
+internet_data <- read_csv(
+  "C:/Users/Bibek/OneDrive/Documents/Raw_data/internet/201805_fixed_pc_performance_r03.csv",
+  show_col_types = FALSE
+)
 
-broadband <- broadband %>%
-  select(
+# Convert column names to snake_case
+internet_data <- internet_data %>%
+  clean_names()
+
+# Keep only required variables
+broadband_clean <- internet_data %>%
+  transmute(
     postcode,
     postcode_area,
-    average_download_speed_mbit_s,
-    maximum_download_speed_mbit_s,
-    average_upload_speed_mbit_s,
-    maximum_upload_speed_mbit_s
-  )
-
-colSums(is.na(broadband))
-
-broadband <- broadband %>%
+    avg_download = average_download_speed_mbit_s,
+    max_download = maximum_download_speed_mbit_s
+  ) %>%
+  filter(postcode_area %in% c("NR", "IP")) %>%
+  mutate(
+    county = case_when(
+      postcode_area == "NR" ~ "NORFOLK",
+      postcode_area == "IP" ~ "SUFFOLK"
+    )
+  ) %>%
+  distinct() %>%
   drop_na()
 
-broadband <- broadband %>%
-  distinct()
+# Check cleaned dataset
+cat("Total Records:", nrow(broadband_clean), "\n")
 
+head(broadband_clean)
 
-broadband <- broadband %>%
-  filter(
-    average_download_speed_mbit_s > 0,
-    maximum_download_speed_mbit_s > 0,
-    average_upload_speed_mbit_s > 0,
-    maximum_upload_speed_mbit_s > 0
-  )
+summary(broadband_clean)
 
-summary(broadband)
-
-str(broadband)
-
-head(broadband)
-
-
-# Create folder (only once)
+# Create output folder if it doesn't exist
 dir.create(
   "C:/Users/Bibek/OneDrive/Documents/Raw_data/broadband_clean",
-  showWarnings = FALSE
+  showWarnings = FALSE,
+  recursive = TRUE
 )
+
+# Save cleaned dataset
 write_csv(
-  broadband,
+  broadband_clean,
   "C:/Users/Bibek/OneDrive/Documents/Raw_data/broadband_clean/broadband_clean.csv"
 )
+
+cat("Broadband cleaning completed successfully!\n")

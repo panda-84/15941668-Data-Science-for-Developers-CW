@@ -138,3 +138,55 @@ clean_house_data(
   "C:/Users/Bibek/OneDrive/Documents/Raw_data/property_price/pp-2025.csv",
   "C:/Users/Bibek/OneDrive/Documents/Raw_data/cleaned_property_price/house_2025_clean.csv"
 )
+
+# Combine All Cleaned House Price Files
+#==========================================
+
+house_2021 <- read_csv(
+  "C:/Users/Bibek/OneDrive/Documents/Raw_data/cleaned_property_price/house_2021_clean.csv",
+  show_col_types = FALSE
+)
+
+house_2022 <- read_csv(
+  "C:/Users/Bibek/OneDrive/Documents/Raw_data/cleaned_property_price/house_2022_clean.csv",
+  show_col_types = FALSE
+)
+
+house_2023 <- read_csv(
+  "C:/Users/Bibek/OneDrive/Documents/Raw_data/cleaned_property_price/house_2023_clean.csv",
+  show_col_types = FALSE
+)
+
+house_2024 <- read_csv(
+  "C:/Users/Bibek/OneDrive/Documents/Raw_data/cleaned_property_price/house_2024_clean.csv",
+  show_col_types = FALSE
+)
+
+house_2025 <- read_csv(
+  "C:/Users/Bibek/OneDrive/Documents/Raw_data/cleaned_property_price/house_2025_clean.csv",
+  show_col_types = FALSE
+)
+
+# Combine all datasets
+house_prices_all <- bind_rows(
+  house_2021,
+  house_2022,
+  house_2023,
+  house_2024,
+  house_2025
+)
+
+# Preview combined data
+head(house_prices_all)
+
+# Check total records
+nrow(house_prices_all)
+
+# Save combined dataset
+write_csv(
+  house_prices_all,
+  "C:/Users/Bibek/OneDrive/Documents/Raw_data/cleaned_property_price/house_prices_all_years.csv"
+)
+
+cat("All house price files combined successfully!\n")
+
