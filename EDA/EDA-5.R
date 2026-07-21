@@ -1,59 +1,74 @@
-#==========================================
-# EDA 5 - Suffolk Broadband Box Plot
-#==========================================
+# ============================================
+# EDA 5
+# Box Plot of Average Download Speed
+# by Postcode District - Suffolk
+# ============================================
 
-# Load libraries
 library(readr)
 library(dplyr)
 library(ggplot2)
+library(stringr)
 
-# Read cleaned broadband dataset
-broadband <- read_csv(
-  "C:/Users/Bibek/OneDrive/Documents/Clean Data/broadband_clean.csv",
-  show_col_types = FALSE
-)
+# Load cleaned broadband data
+broadband <- read_csv("Clean Data/broadband_clean.csv")
 
-# Keep only Suffolk
-suffolk_speed <- broadband %>%
+# Extract postcode district (e.g. IP1, IP4, IP14)
+broadband <- broadband %>%
+  mutate(
+    district = str_extract(postcode, "^[A-Z]{1,2}[0-9]{1,2}")
+  )
+
+# Filter Suffolk data
+suffolk_broadband <- broadband %>%
   filter(county == "SUFFOLK")
 
-# Summary statistics
-suffolk_summary <- suffolk_speed %>%
-  summarise(
-    Mean = round(mean(avg_download),2),
-    Median = round(median(avg_download),2),
-    SD = round(sd(avg_download),2),
-    Minimum = min(avg_download),
-    Maximum = max(avg_download),
-    Total = n()
+# Count observations in each district
+district_counts <- suffolk_broadband %>%
+  count(district) %>%
+  arrange(desc(n))
+
+print(district_counts)
+
+# Keep districts with at least 5 observations
+top_districts <- district_counts %>%
+  filter(n >= 5) %>%
+  pull(district)
+
+suffolk_filtered <- suffolk_broadband %>%
+  filter(district %in% top_districts)
+
+# Create box plot
+box_plot <- ggplot(
+  suffolk_filtered,
+  aes(
+    x = reorder(district, avg_download, median),
+    y = avg_download
   )
-
-print(suffolk_summary)
-
-# Box Plot
-ggplot(suffolk_speed,
-       aes(x = county,
-           y = avg_download,
-           fill = county)) +
-  
-  geom_boxplot(width=0.5) +
-  
-  labs(
-    title="Average Download Speed Distribution - Suffolk",
-    x="",
-    y="Average Download Speed (Mbps)"
+) +
+  geom_boxplot(
+    fill = "darkorange",
+    outlier.alpha = 0.3
   ) +
-  
+  labs(
+    title = "Average Download Speed by Postcode District - Suffolk",
+    x = "Postcode District",
+    y = "Average Download Speed (Mbps)"
+  ) +
   theme_minimal() +
-  
   theme(
-    legend.position="none",
-    plot.title=element_text(face="bold",hjust=0.5)
+    axis.text.x = element_text(
+      angle = 45,
+      hjust = 1
+    )
   )
+
+print(box_plot)
 
 # Save chart
 ggsave(
-  "C:/Users/Bibek/OneDrive/Documents/Charts/suffolk_download_boxplot.png",
-  width=8,
-  height=6
+  "Charts/EDA5_Suffolk_Broadband_Boxplot.png",
+  plot = box_plot,
+  width = 10,
+  height = 6,
+  dpi = 300
 )

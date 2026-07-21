@@ -1,86 +1,142 @@
-#==========================================
-# EDA 10 - Drug Offence Rate Line Chart
-#==========================================
+# ============================================
+# EDA 9
+# Labelled Pie Chart of Robbery Rate
+# October 2024
+# ============================================
 
-# Load libraries
 library(readr)
 library(dplyr)
-library(ggplot2)
 
-# Read cleaned datasets
-crime <- read_csv(
-  "C:/Users/Bibek/OneDrive/Documents/Clean Data/crime_clean.csv",
-  show_col_types = FALSE
+# ============================================
+# Load datasets
+# ============================================
+
+crime <- read_csv("Clean Data/crime_clean.csv")
+population <- read_csv("Clean Data/population_clean.csv")
+
+# ============================================
+# Filter robbery crimes for October 2024
+# ============================================
+
+robbery_data <- crime %>%
+  filter(
+    month == "2024-10",
+    crime_type == "Robbery"
+  )
+
+# Check records
+print(head(robbery_data))
+
+# ============================================
+# Count robberies by district
+# ============================================
+
+district_robbery <- robbery_data %>%
+  count(
+    county,
+    district,
+    name = "robbery_cases"
+  )
+
+print(district_robbery)
+
+# ============================================
+# Population for each district
+# ============================================
+
+district_population <- tibble(
+  
+  district = c(
+    "Breckland",
+    "Broadland",
+    "Great Yarmouth",
+    "King's Lynn and West Norfolk",
+    "North Norfolk",
+    "Norwich",
+    "South Norfolk",
+    "Babergh",
+    "East Suffolk",
+    "Ipswich",
+    "Mid Suffolk",
+    "West Suffolk"
+  ),
+  
+  population = c(
+    145700,
+    129000,
+    99000,
+    152800,
+    103900,
+    144000,
+    140300,
+    92700,
+    250000,
+    139000,
+    102500,
+    180000
+  )
+  
 )
 
-population <- read_csv(
-  "C:/Users/Bibek/OneDrive/Documents/Clean Data/population_clean.csv",
-  show_col_types = FALSE
-)
+# ============================================
+# Calculate robbery rate
+# ============================================
 
-# Filter only drug offences
-drug <- crime %>%
-  filter(crime_type == "Drugs")
-
-# Extract year
-drug <- drug %>%
+district_robbery <- district_robbery %>%
+  left_join(
+    district_population,
+    by = "district"
+  ) %>%
   mutate(
-    year = substr(month, 1, 4)
-  )
+    robbery_rate = round(
+      (robbery_cases / population) * 100000,
+      2
+    )
+  ) %>%
+  filter(!is.na(robbery_rate))
 
-# Count offences
-drug_summary <- drug %>%
-  group_by(year, county) %>%
-  summarise(
-    drug_cases = n(),
-    .groups = "drop"
-  )
+print(district_robbery)
 
-# Join population
-drug_summary <- drug_summary %>%
-  left_join(population, by = "county")
+# ============================================
+# Labels
+# ============================================
 
-# Calculate rate per 100000
-drug_summary <- drug_summary %>%
-  mutate(
-    drug_rate = (drug_cases / total_population) * 100000
-  )
-
-print(drug_summary)
-
-# Create Charts folder
-dir.create(
-  "C:/Users/Bibek/OneDrive/Documents/Charts",
-  showWarnings = FALSE
+pie_labels <- paste0(
+  district_robbery$district,
+  "\n",
+  district_robbery$robbery_rate
 )
 
-# Create chart
-drug_plot <- ggplot(
-  drug_summary,
-  aes(
-    x = year,
-    y = drug_rate,
-    colour = county,
-    group = county
-  )
-) +
-  geom_line(linewidth = 1.2) +
-  geom_point(size = 3) +
-  labs(
-    title = "Drug Offence Rate per 100,000 Population (2023–2026)",
-    x = "Year",
-    y = "Drug Offence Rate",
-    colour = "County"
-  ) +
-  theme_minimal()
+# ============================================
+# Draw Pie Chart
+# ============================================
 
-# Display
-print(drug_plot)
-
-# Save
-ggsave(
-  "C:/Users/Bibek/OneDrive/Documents/Charts/eda10_drug_offence_rate_line.png",
-  plot = drug_plot,
-  width = 8,
-  height = 6
+pie(
+  district_robbery$robbery_rate,
+  labels = pie_labels,
+  main = "Robbery Rate per 100,000 Population by District\n(October 2024)",
+  col = terrain.colors(nrow(district_robbery)),
+  clockwise = TRUE
 )
+
+# ============================================
+# Save Pie Chart
+# ============================================
+
+png(
+  "Charts/EDA9_Robbery_PieChart.png",
+  width = 900,
+  height = 700
+)
+
+pie(
+  district_robbery$robbery_rate,
+  labels = pie_labels,
+  main = "Robbery Rate per 100,000 Population by District\n(October 2024)",
+  col = terrain.colors(nrow(district_robbery)),
+  clockwise = TRUE
+)
+
+dev.off()
+
+cat("EDA 9 completed successfully!\n")

@@ -1,114 +1,167 @@
-#==========================================
-# EDA 8 - Radar Chart of Crime Rates
-# Norfolk vs Suffolk (April 2024)
-#==========================================
+# ============================================
+# EDA 8
+# Radar Chart - Vehicle Crime Rate per 100,000
+# May 2023 to April 2024
+# ============================================
 
-# Load libraries
 library(readr)
 library(dplyr)
 library(tidyr)
 library(fmsb)
 
-# Read cleaned datasets
-crime <- read_csv(
-  "C:/Users/Bibek/OneDrive/Documents/Clean Data/crime_clean.csv",
-  show_col_types = FALSE
-)
+# ============================================
+# STEP 1: Load datasets
+# ============================================
 
-population <- read_csv(
-  "C:/Users/Bibek/OneDrive/Documents/Clean Data/population_clean.csv",
-  show_col_types = FALSE
-)
+crime <- read_csv("Clean Data/crime_clean.csv")
+population <- read_csv("Clean Data/population_clean.csv")
 
-# Select April 2024 and chosen crime types
-crime_selected <- crime %>%
+# ============================================
+# STEP 2: Filter Vehicle Crime
+# (May 2023 - April 2024)
+# ============================================
+
+vehicle_crime <- crime %>%
   filter(
-    month == "2024-04",
-    crime_type %in% c(
-      "Vehicle crime",
-      "Burglary",
-      "Robbery",
-      "Drugs",
-      "Shoplifting"
-    )
+    crime_type == "Vehicle crime",
+    month >= "2023-05",
+    month <= "2024-04"
   )
 
-# Count crimes
-crime_summary <- crime_selected %>%
-  group_by(county, crime_type) %>%
+# Check records
+print(head(vehicle_crime))
+
+# ============================================
+# STEP 3: Count vehicle crimes
+# ============================================
+
+monthly_vehicle <- vehicle_crime %>%
+  group_by(county, month) %>%
   summarise(
-    crime_count = n(),
+    vehicle_cases = n(),
     .groups = "drop"
   )
 
-# Join population
-crime_summary <- crime_summary %>%
-  left_join(population, by = "county")
+print(monthly_vehicle)
 
-# Calculate rate per 100000 population
-crime_summary <- crime_summary %>%
+# ============================================
+# STEP 4: Calculate crime rate
+# per 100,000 population
+# ============================================
+
+monthly_vehicle <- monthly_vehicle %>%
+  left_join(population, by = "county") %>%
   mutate(
-    crime_rate = (crime_count / total_population) * 100000
+    vehicle_rate = round(
+      (vehicle_cases / total_population) * 100000,
+      2
+    )
   )
 
-# Convert to wide format
-radar_data <- crime_summary %>%
-  select(county, crime_type, crime_rate) %>%
+print(monthly_vehicle)
+
+# ============================================
+# STEP 5: Convert to radar format
+# ============================================
+
+radar_table <- monthly_vehicle %>%
+  select(
+    county,
+    month,
+    vehicle_rate
+  ) %>%
   pivot_wider(
-    names_from = crime_type,
-    values_from = crime_rate
-  )
+    names_from = month,
+    values_from = vehicle_rate,
+    values_fill = 0
+  ) %>%
+  arrange(county)
 
-# Convert to dataframe
-radar_df <- as.data.frame(radar_data)
+print(radar_table)
 
-# Set county names as row names
-rownames(radar_df) <- radar_df$county
-radar_df$county <- NULL
+# ============================================
+# STEP 6: Prepare radar dataframe
+# ============================================
 
-# Add max and min rows
-max_values <- apply(radar_df, 2, max) * 1.2
-min_values <- rep(0, ncol(radar_df))
+radar_data <- as.data.frame(radar_table[, -1])
 
-radar_df <- rbind(
-  max_values,
-  min_values,
-  radar_df
+rownames(radar_data) <- radar_table$county
+
+max_value <- ceiling(max(radar_data) * 1.2)
+min_value <- 0
+
+radar_data <- rbind(
+  rep(max_value, ncol(radar_data)),
+  rep(min_value, ncol(radar_data)),
+  radar_data
 )
 
-rownames(radar_df)[1] <- "Maximum"
-rownames(radar_df)[2] <- "Minimum"
+rownames(radar_data)[1] <- "Maximum"
+rownames(radar_data)[2] <- "Minimum"
 
-# Draw radar chart
+# ============================================
+# STEP 7: Display Radar Chart
+# ============================================
+
 radarchart(
-  radar_df,
+  radar_data,
   axistype = 1,
-  pcol = c(NA, NA, "blue", "red"),
+  pcol = c("steelblue", "darkorange"),
   pfcol = c(
-    NA,
-    NA,
-    rgb(0, 0, 1, 0.3),
-    rgb(1, 0, 0, 0.3)
+    rgb(0.27,0.51,0.71,0.30),
+    rgb(1,0.55,0,0.30)
   ),
   plwd = 3,
-  plty = 1,
-  cglcol = "grey",
+  cglcol = "grey70",
   cglty = 1,
-  cglwd = 0.8,
   axislabcol = "black",
-  vlcex = 0.9,
-  title = "Crime Rate per 100,000 Population (April 2024)"
+  vlcex = 0.8,
+  title = "Vehicle Crime Rate per 100,000 Population\n(May 2023 - April 2024)"
 )
 
 legend(
   "topright",
   legend = c("Norfolk", "Suffolk"),
-  col = c("blue", "red"),
+  col = c("steelblue", "darkorange"),
   lwd = 3,
   bty = "n"
 )
 
-# View calculated crime rates
-print(crime_summary)
+# ============================================
+# STEP 8: Save Radar Chart
+# ============================================
 
+png(
+  "Charts/EDA8_Vehicle_Crime_Radar.png",
+  width = 900,
+  height = 900,
+  res = 150
+)
 
+radarchart(
+  radar_data,
+  axistype = 1,
+  pcol = c("steelblue", "darkorange"),
+  pfcol = c(
+    rgb(0.27,0.51,0.71,0.30),
+    rgb(1,0.55,0,0.30)
+  ),
+  plwd = 3,
+  cglcol = "grey70",
+  cglty = 1,
+  axislabcol = "black",
+  vlcex = 0.8,
+  title = "Vehicle Crime Rate per 100,000 Population\n(May 2023 - April 2024)"
+)
+
+legend(
+  "topright",
+  legend = c("Norfolk", "Suffolk"),
+  col = c("steelblue", "darkorange"),
+  lwd = 3,
+  bty = "n"
+)
+
+dev.off()
+
+cat("EDA 8 completed successfully!\n")

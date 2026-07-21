@@ -1,59 +1,51 @@
-#==========================================
-# EDA 4 - Norfolk Broadband Box Plot
-#==========================================
-
-# Load libraries
 library(readr)
 library(dplyr)
 library(ggplot2)
+library(stringr)
 
-# Read cleaned broadband dataset
-broadband <- read_csv(
-  "C:/Users/Bibek/OneDrive/Documents/Clean Data/broadband_clean.csv",
-  show_col_types = FALSE
-)
+# Load broadband data
+broadband <- read_csv("Clean Data/broadband_clean.csv")
 
-# Keep only Norfolk
-norfolk_speed <- broadband %>%
+# Extract postcode district (e.g. NR1, NR14)
+broadband <- broadband %>%
+  mutate(
+    district = str_extract(postcode, "^[A-Z]{1,2}[0-9]{1,2}")
+  )
+
+# Norfolk only
+norfolk <- broadband %>%
   filter(county == "NORFOLK")
 
-# Summary statistics
-norfolk_summary <- norfolk_speed %>%
-  summarise(
-    Mean = round(mean(avg_download),2),
-    Median = round(median(avg_download),2),
-    SD = round(sd(avg_download),2),
-    Minimum = min(avg_download),
-    Maximum = max(avg_download),
-    Total = n()
-  )
+# Keep districts with at least 5 records
+district_counts <- norfolk %>%
+  count(district)
 
-print(norfolk_summary)
+top_districts <- district_counts %>%
+  filter(n >= 5) %>%
+  pull(district)
 
-# Box Plot
-ggplot(norfolk_speed,
-       aes(x = county,
-           y = avg_download,
-           fill = county)) +
-  
-  geom_boxplot(width = 0.5) +
-  
+norfolk <- norfolk %>%
+  filter(district %in% top_districts)
+
+# Plot
+ggplot(norfolk,
+       aes(x = reorder(district, avg_download, median),
+           y = avg_download)) +
+  geom_boxplot(fill = "steelblue") +
   labs(
-    title = "Average Download Speed Distribution - Norfolk",
-    x = "",
+    title = "Average Download Speed by Postcode District (Norfolk)",
+    x = "Postcode District",
     y = "Average Download Speed (Mbps)"
   ) +
-  
   theme_minimal() +
-  
   theme(
-    legend.position = "none",
-    plot.title = element_text(face="bold",hjust=0.5)
+    axis.text.x = element_text(angle = 45, hjust = 1)
   )
 
-# Save chart
+# Save
 ggsave(
-  "C:/Users/Bibek/OneDrive/Documents/Charts/norfolk_download_boxplot.png",
-  width=8,
-  height=6
+  "Charts/broadband_boxplot_norfolk.png",
+  width = 10,
+  height = 6,
+  dpi = 300
 )
